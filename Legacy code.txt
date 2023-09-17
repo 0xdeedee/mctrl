@@ -1,0 +1,49 @@
+static uint16_t Presc = 0u;
+static uint8_t buff[10u] = {0u,0u,0u,0u,0u,0u,0u,0u,0u,0u};
+uint8_t tmp = 0u;
+uint8_t EveryCellIsEqual = 1u;
+static uint8_t buffIdx = 0u;
+static uint8_t OldSector = 0u;
+static uint8_t NewSector = 0u;
+
+
+
+    	if (rampPresc > 1)
+    	{
+			Svm.Angle += 100;
+			Svm.Amp = 15;
+			rampPresc = 0u;
+    	}
+		else
+		{
+			rampPresc++;
+		}
+			if (buffIdx < 10)
+			{
+				buff[buffIdx] = APP_HALL_SENS_GetSector();
+				buffIdx++;
+				tmp = buff[0u];
+				EveryCellIsEqual = 1u;
+				for(uint8_t j = 0u; j < 10; j++)
+				{
+					//printf("Buff[%d]:%d\n",j, buff[j]);
+					if (tmp != buff[j])
+					{
+						EveryCellIsEqual = 0u;
+					}
+				}
+				if (EveryCellIsEqual == 1u)
+				{
+					NewSector = tmp;
+				}
+			}
+			else
+			{
+				buffIdx = 0u;
+			}
+			if (NewSector != OldSector)
+			{
+				printf("Captured sector switched at:\n");
+				printf("NewSector:%d ********* at Svm.Angle:%u Svm.Amp:%u\n", NewSector, Svm.Angle, Svm.Amp);
+				OldSector = NewSector;
+			}
