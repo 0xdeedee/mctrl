@@ -1,7 +1,7 @@
 #include "LL_PORTS.h"
 #include "BOARD_CFG.h"
 
-void LL_PORTS_Init(void)
+void LL_PORTS_Init( void )
 {
 /******************MCPWM phase A**********************************************/
 /* Configuration is done in LL_TIMERS.c unit */

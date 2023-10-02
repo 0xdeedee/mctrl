@@ -8,9 +8,9 @@
 #define OFFSET_PHASE_A				0u
 #define OFFSET_PHASE_B				21845u
 #define OFFSET_PHASE_C				43690u
-#define IDX_PHASE_A					0u
-#define IDX_PHASE_B					1u
-#define IDX_PHASE_C					2u
+#define IDX_PHASE_A				0u
+#define IDX_PHASE_B				1u
+#define IDX_PHASE_C				2u
 #define RATIO_SECTOR_TO_RAW			10922
 
 const uint16_t SvmLut[NMBR_OF_LUT_STEPS] =
@@ -69,53 +69,96 @@ const uint16_t SvmLut[NMBR_OF_LUT_STEPS] =
 	1550u,1550u,1550u
 };
 
-const uint16_t PhAngleOffset[NMBR_OF_PHASES] = {OFFSET_PHASE_A, OFFSET_PHASE_B, OFFSET_PHASE_C};
+const uint16_t PhAngleOffset[NMBR_OF_PHASES] = { OFFSET_PHASE_A, OFFSET_PHASE_B, OFFSET_PHASE_C };
 
 typedef struct Svm_t
 {
-  uint16_t Angle;
-  uint16_t Amp;
-  uint16_t Sector;
-
-}Svm_t;
+	uint16_t	Angle;
+	uint16_t	Amp;
+	uint16_t	Sector;
+} Svm_t;
 
 static Svm_t Svm;
 
 typedef struct Ramp_t
 {
-  uint16_t CurrVal;
-  uint16_t Step;
-  uint16_t EndVal;
+ 	uint16_t	CurrVal;
+	uint16_t	Step;
+	uint16_t	EndVal;
 }Ramp_t;
 
-static Ramp_t SpeedRamp;
-static Ramp_t AmplRamp;
+static Ramp_t		SpeedRamp;
+static Ramp_t		AmplRamp;
 
-static uint32_t CurrTicks = 0u;
+static uint32_t		CurrTicks = 0u;
 
-static void DoRamps(Ramp_t * pRamp);
-static void GenSvm(Svm_t *pSvm);
+/**
+  * @brief This function generate sine wave
+  * @param none
+  * @retval none
+  */
+static void DoRamps( Ramp_t * pRamp )
+{
+    if ( pRamp->EndVal > pRamp->CurrVal )
+    {
+    	pRamp->CurrVal += pRamp->Step;
+    }
+    else
+    {
+
+    }
+}
+
+/**
+  * @brief This function generate sine wave
+  * @param none
+  * @retval none
+  */
+static void GenSvm( Svm_t *pSvm )
+{
+	uint16_t		phADutyCycle = 0u;
+	uint16_t		phBDutyCycle = 0u;
+	uint16_t		phCDutyCycle = 0u;
+	uint16_t		Offset = 0u;
+	uint16_t		idx = 0u;
+
+	Offset = ( Svm.Angle + PhAngleOffset[IDX_PHASE_A] );
+	idx = ( Offset >> 7u );
+	phADutyCycle = ( ( SvmLut[idx] * Svm.Amp ) / 100u );
+	
+	Offset = ( Svm.Angle + PhAngleOffset[IDX_PHASE_B] );
+	idx = ( Offset >> 7u );
+	phBDutyCycle = ( ( SvmLut[idx] * Svm.Amp ) / 100u );
+	
+	Offset = ( Svm.Angle + PhAngleOffset[IDX_PHASE_C] );
+	idx = ( Offset >> 7u );
+	phCDutyCycle = ( ( SvmLut[idx] * Svm.Amp ) / 100u );
+
+	LL_TIMERS_SetDutyPhA( phADutyCycle );
+	LL_TIMERS_SetDutyPhB( phBDutyCycle );
+	LL_TIMERS_SetDutyPhC( phCDutyCycle );
+}
 
 /**
   * @brief This function initialize initialize local variables
   * @param none
   * @retval none
   */
-void APP_MOT_CTRL_Init(void)
+void APP_MOT_CTRL_Init( void )
 {
 	CurrTicks = LL_ISR_SysTicks;
 
-	Svm.Angle = 0u;
-	Svm.Amp = 0u;
-	Svm.Sector = 0u;
+	Svm.Angle		= 0u;
+	Svm.Amp			= 0u;
+	Svm.Sector		= 0u;
 
-	SpeedRamp.CurrVal = 0u;
-	SpeedRamp.Step = 1u;
-	SpeedRamp.EndVal = 1000u;
+	SpeedRamp.CurrVal	= 0u;
+	SpeedRamp.Step		= 1u;
+	SpeedRamp.EndVal	= 1000u;
 
-	AmplRamp.CurrVal = 0u;
-	AmplRamp.Step = 1u;
-	AmplRamp.EndVal = 15u;
+	AmplRamp.CurrVal	= 0u;
+	AmplRamp.Step		= 1u;
+	AmplRamp.EndVal		= 15u;
 }
 
 /**
@@ -123,32 +166,32 @@ void APP_MOT_CTRL_Init(void)
   * @param none
   * @retval none
   */
-void APP_MOT_CTRL_Task(void)
+void APP_MOT_CTRL_Task( void )
 {
-  static uint16_t rampPresc = 0u;
-  static uint16_t CalcAngle = 0u;
-  static uint8_t State = 0u;
+	static uint16_t		rampPresc = 0u;
+	static uint16_t		CalcAngle = 0u;
+	static uint8_t		State = 0u;
 
-  	switch(State)
-  	{
-  		case 0u:
-  			if (1000u == (LL_TIMERS_TIMEDIFF(LL_ISR_SysTicks, CurrTicks)))
-  			{
-  				Svm.Amp = 0u;
-  				Svm.Angle = 0u;
-  				CurrTicks = LL_ISR_SysTicks;
-  				State = 1u;
-  				printf("Rotor aligned\n");
-  			}
-  			else
-  			{
-  				Svm.Angle = 54000u;
-  				Svm.Amp = 15u;
-  			}
-  			GenSvm(&Svm);
-  		break;
-  		case 1u:
-			if (10u == (LL_TIMERS_TIMEDIFF(LL_ISR_SysTicks, CurrTicks)))
+	switch( State )
+	{
+		case 0u:
+			if ( 1000u == ( LL_TIMERS_TIMEDIFF( LL_ISR_SysTicks, CurrTicks ) ) )
+			{
+				Svm.Amp		= 0u;
+				Svm.Angle	= 0u;
+				CurrTicks	= LL_ISR_SysTicks;
+				State		= 1u;
+				printf( "Rotor aligned\n" );
+			}
+			else
+			{
+				Svm.Angle	= 54000u;
+				Svm.Amp		= 15u;
+			}
+			GenSvm( &Svm );
+		break;
+		case 1u:
+			if ( 10u == ( LL_TIMERS_TIMEDIFF( LL_ISR_SysTicks, CurrTicks ) ) )
 			{
 				CurrTicks = LL_ISR_SysTicks;
 #if 0
@@ -189,60 +232,16 @@ void APP_MOT_CTRL_Task(void)
 				Svm.Angle += 50;
 				Svm.Amp = 12/*AmplRamp.CurrVal*/;
 
-		    	//printf("Svm.Angle:%u Svm.Amp:%u\n", Svm.Angle, Svm.Amp);
-				GenSvm(&Svm);
+			    	//printf("Svm.Angle:%u Svm.Amp:%u\n", Svm.Angle, Svm.Amp);
+				GenSvm( &Svm );
 			}
 		break;
-  		default:
-
-  		break;
-  	}
+		default:
+		break;
+	}
 }
 
-/**
-  * @brief This function generate sine wave
-  * @param none
-  * @retval none
-  */
-static void DoRamps(Ramp_t * pRamp)
-{
-    if (pRamp -> EndVal > pRamp -> CurrVal)
-    {
-    	pRamp -> CurrVal += pRamp -> Step;
-    }
-    else
-    {
 
-    }
-}
-
-/**
-  * @brief This function generate sine wave
-  * @param none
-  * @retval none
-  */
-static void GenSvm(Svm_t *pSvm)
-{
-  uint16_t phADutyCycle = 0u;
-  uint16_t phBDutyCycle = 0u;
-  uint16_t phCDutyCycle = 0u;
-  uint16_t Offset = 0u;
-  uint16_t idx = 0u;
-
-	  	Offset = (Svm.Angle + PhAngleOffset[IDX_PHASE_A]);
-	  	idx = (Offset >> 7u);
-		phADutyCycle = ((SvmLut[idx] * Svm.Amp) / 100u);
-		Offset = (Svm.Angle + PhAngleOffset[IDX_PHASE_B]);
-		idx = (Offset >> 7u);
-		phBDutyCycle = ((SvmLut[idx] * Svm.Amp) / 100u);
-		Offset = (Svm.Angle + PhAngleOffset[IDX_PHASE_C]);
-		idx = (Offset >> 7u);
-		phCDutyCycle = ((SvmLut[idx] * Svm.Amp) / 100u);
-
-	    LL_TIMERS_SetDutyPhA(phADutyCycle);
-	    LL_TIMERS_SetDutyPhB(phBDutyCycle);
-	    LL_TIMERS_SetDutyPhC(phCDutyCycle);
-}
 
 
 
