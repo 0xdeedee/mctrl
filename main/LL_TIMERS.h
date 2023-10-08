@@ -1,12 +1,17 @@
 #ifndef LL_TIMERS_H
 #define LL_TIMERS_H
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "driver/mcpwm_prelude.h"
 
 // absolute unsigned difference; immune to overflows; use for u32_t only!
 #define LL_TIMERS_TIMEDIFF(a,b)   (((a) >= (b)) ? ((a)-(b)) : (((a)+((b)^0xFFFFFFFF)+1)))
 
-extern void LL_TIMERS_Init(void);
+//extern void LL_TIMERS_Init(void);
+extern void LL_TIMERS_Init( TaskHandle_t adc_task );
+
 
 #define MCPWM_IDX_PHASE_A				( 0 )
 #define MCPWM_IDX_PHASE_B				( 1 )

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "esp_timer.h"
 #include "driver/mcpwm_prelude.h"
 #include "LL_TIMERS.h"
@@ -18,17 +19,49 @@
 static mcpwm_cmpr_handle_t		comparators[BLDC_CFG_NMBR_OF_PHASES];
 static mcpwm_dead_time_config_t		dt_config;
 
-static void InitTimMcpwm(void);
+//extern QueueHandle_t			x_queue_adc;
+
+
+typedef struct user_data
+{
+	unsigned char		idx;
+	TaskHandle_t		th;
+} ud_t;
+
+
+
+
+static void InitTimMcpwm( TaskHandle_t adc_task );
 static void InitTimSysTick(void);
+
+
+static bool IRAM_ATTR mcpwm_timer_updated(	mcpwm_timer_handle_t timer, 
+						const mcpwm_timer_event_data_t *edata, 
+						void *user_ctx )
+/*
+static bool IRAM_ATTR bldc_hall_updated(        mcpwm_unit_t mcpwm,
+                                                mcpwm_capture_channel_id_t cap_channel,
+                                                const cap_event_data_t *edata,
+                                                void *user_data )
+*/
+{
+	ud_t				*__ud = ( ud_t * ) user_ctx;
+        TaskHandle_t                    task_to_notify = ( TaskHandle_t ) __ud->th;
+        BaseType_t                      high_task_wakeup = pdFALSE;
+
+	vTaskNotifyGiveIndexedFromISR( task_to_notify, __ud->idx, &high_task_wakeup );
+//        vTaskNotifyGiveFromISR( task_to_notify, &high_task_wakeup );
+        return high_task_wakeup == pdTRUE;
+}
 
 /**
   * @brief
   * @param none
   * @retval none
   */
-void LL_TIMERS_Init( void )
+void LL_TIMERS_Init( TaskHandle_t adc_task )
 {
-	InitTimMcpwm();
+	InitTimMcpwm( adc_task );
 	InitTimSysTick();
 }
 
@@ -37,7 +70,7 @@ void LL_TIMERS_Init( void )
   * @param none
   * @retval none
   */
-static void InitTimMcpwm( void )
+static void InitTimMcpwm( TaskHandle_t adc_task )
 {
 	mcpwm_timer_handle_t		timer = NULL;
 	mcpwm_timer_config_t		timer_config;
@@ -70,6 +103,15 @@ static void InitTimMcpwm( void )
 
 	for ( int i = 0; i < BLDC_CFG_NMBR_OF_PHASES; i++ )
 	{
+		mcpwm_timer_event_callbacks_t		__timer_cb;
+		ud_t					__ud;
+
+		__timer_cb.on_full = mcpwm_timer_updated;
+		memset( &__ud, 0, sizeof( __ud ) );
+
+		__ud.idx = i;
+		__ud.th = adc_task;
+		mcpwm_timer_register_event_callbacks( timer, &__timer_cb, ( void * )&__ud );
 		ESP_ERROR_CHECK( mcpwm_operator_connect_timer( operators[i], timer ) );
 	}
 

@@ -3,15 +3,13 @@
 
 idf_component_register(
     SRCS main.c         # list the source files of this component
-    HAL\\LL_PORTS.c
-    HAL\\LL_TIMERS.c
-    HAL\\LL_ISR.c
-    APP\\APP_MOT_CTRL.c
-    APP\\APP_HALL_SENS.c
+    LL_PORTS.c
+    LL_TIMERS.c
+    LL_ISR.c
+    APP_MOT_CTRL.c
+    APP_HALL_SENS.c
+    LL_ADC.c
     INCLUDE_DIRS        # optional, add here public include directories
-    CFG/
-    HAL/
-    APP/
     PRIV_INCLUDE_DIRS   # optional, add here private include directories
     REQUIRES            # optional, list the public requirements (component names)
     PRIV_REQUIRES       # optional, list the private requirements

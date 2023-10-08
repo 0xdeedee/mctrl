@@ -99,14 +99,8 @@ static uint32_t		CurrTicks = 0u;
   */
 static void DoRamps( Ramp_t * pRamp )
 {
-    if ( pRamp->EndVal > pRamp->CurrVal )
-    {
-    	pRamp->CurrVal += pRamp->Step;
-    }
-    else
-    {
-
-    }
+	if ( pRamp->EndVal > pRamp->CurrVal )
+		pRamp->CurrVal += pRamp->Step;
 }
 
 /**
