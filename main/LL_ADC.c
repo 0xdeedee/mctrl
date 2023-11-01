@@ -94,7 +94,7 @@ static bool adc_calibration_init(void)
 
 static void __adc_ctrl_handler( void *arg )
 {
-
+	while( 1 ) vTaskDelay( pdMS_TO_TICKS( 5000 ) );
 }
 
 

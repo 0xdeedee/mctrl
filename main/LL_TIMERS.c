@@ -49,7 +49,7 @@ static bool IRAM_ATTR bldc_hall_updated(        mcpwm_unit_t mcpwm,
         TaskHandle_t                    task_to_notify = ( TaskHandle_t ) __ud->th;
         BaseType_t                      high_task_wakeup = pdFALSE;
 
-	vTaskNotifyGiveIndexedFromISR( task_to_notify, __ud->idx, &high_task_wakeup );
+//	vTaskNotifyGiveIndexedFromISR( task_to_notify, __ud->idx, &high_task_wakeup );
 //        vTaskNotifyGiveFromISR( task_to_notify, &high_task_wakeup );
         return high_task_wakeup == pdTRUE;
 }
@@ -77,8 +77,8 @@ static void InitTimMcpwm( TaskHandle_t adc_task )
 	mcpwm_oper_handle_t		operators[BLDC_CFG_NMBR_OF_PHASES];
 	mcpwm_operator_config_t		operator_config;
 	mcpwm_comparator_config_t	compare_config;
-	mcpwm_gen_handle_t		generators[BLDC_CFG_NMBR_OF_PHASES][2] = {};
-	mcpwm_generator_config_t	gen_config = {};
+	mcpwm_gen_handle_t		generators[BLDC_CFG_NMBR_OF_PHASES][2];
+	mcpwm_generator_config_t	gen_config;
 
 	const int			gen_gpios[BLDC_CFG_NMBR_OF_PHASES][2] =
 	{
@@ -87,14 +87,22 @@ static void InitTimMcpwm( TaskHandle_t adc_task )
 		{ BOARD_CFG_GPIO_PWM2A_OUT, BOARD_CFG_GPIO_PWM2B_OUT },
 	};
 
+
+	memset( &generators, 0, sizeof( generators ) );
+	memset( &operators, 0, sizeof( operators ) );
+	memset( &timer_config, 0, sizeof( timer_config ) );
+
+
 	timer_config.group_id		= 0;
 	timer_config.clk_src		= MCPWM_TIMER_CLK_SRC_DEFAULT;
 	timer_config.resolution_hz	= MCPWM_TIMER_RESOLUTION_HZ;
 	timer_config.count_mode		= MCPWM_TIMER_COUNT_MODE_UP;
 	timer_config.period_ticks	= MCPWM_PERIOD;
+	timer_config.intr_priority	= 0;
 
 	ESP_ERROR_CHECK( mcpwm_new_timer( &timer_config, &timer ) );
 
+	memset( &operator_config, 0, sizeof( mcpwm_operator_config_t ) );
 	operator_config.group_id = 0;
 	for ( int i = 0; i < BLDC_CFG_NMBR_OF_PHASES; i++ )
 	{
@@ -103,18 +111,19 @@ static void InitTimMcpwm( TaskHandle_t adc_task )
 
 	for ( int i = 0; i < BLDC_CFG_NMBR_OF_PHASES; i++ )
 	{
-		mcpwm_timer_event_callbacks_t		__timer_cb;
-		ud_t					__ud;
-
-		__timer_cb.on_full = mcpwm_timer_updated;
-		memset( &__ud, 0, sizeof( __ud ) );
-
-		__ud.idx = i;
-		__ud.th = adc_task;
-		mcpwm_timer_register_event_callbacks( timer, &__timer_cb, ( void * )&__ud );
+//		mcpwm_timer_event_callbacks_t		__timer_cb;
+//		ud_t					__ud;
+//
+//		__timer_cb.on_full = mcpwm_timer_updated;
+//		memset( &__ud, 0, sizeof( __ud ) );
+//
+//		__ud.idx = i;
+//		__ud.th = adc_task;
+//		mcpwm_timer_register_event_callbacks( timer, &__timer_cb, ( void * )&__ud );
 		ESP_ERROR_CHECK( mcpwm_operator_connect_timer( operators[i], timer ) );
 	}
 
+	memset( &compare_config, 0, sizeof( mcpwm_comparator_config_t ) );
 	compare_config.flags.update_cmp_on_tez = true;
 	for ( int i = 0; i < BLDC_CFG_NMBR_OF_PHASES; i++ )
 	{
@@ -122,6 +131,7 @@ static void InitTimMcpwm( TaskHandle_t adc_task )
 		ESP_ERROR_CHECK( mcpwm_comparator_set_compare_value( comparators[i], 0 ) );
 	}
 
+	memset( &gen_config, 0, sizeof( mcpwm_generator_config_t ) );
 	for ( int i = 0; i < BLDC_CFG_NMBR_OF_PHASES; i++ )
 	{
 		for ( int j = 0; j < 2; j++ )
@@ -151,6 +161,7 @@ static void InitTimMcpwm( TaskHandle_t adc_task )
 														MCPWM_GEN_ACTION_LOW ) ) );
 	}
 
+	memset( &dt_config, 0, sizeof( dt_config ) );
 	dt_config.posedge_delay_ticks = 5;
 	dt_config.flags.invert_output = true; /* It must be here due to DRV8300 specifics(MODE) */
 	for ( int i = 0; i < BLDC_CFG_NMBR_OF_PHASES; i++ )
@@ -160,8 +171,9 @@ static void InitTimMcpwm( TaskHandle_t adc_task )
 										&dt_config ) );
 	}
 
+	memset( &dt_config, 0, sizeof( dt_config ) );
 	dt_config.negedge_delay_ticks = 5;
-	/*dt_config.flags.invert_output = true;*/
+	dt_config.flags.invert_output = true;
 	for ( int i = 0; i < BLDC_CFG_NMBR_OF_PHASES; i++ )
 	{
 		ESP_ERROR_CHECK( mcpwm_generator_set_dead_time(			generators[i][MCPWM_GEN_IDX_HIGH], 

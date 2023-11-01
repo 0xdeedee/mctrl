@@ -25,5 +25,6 @@ void app_main(void)
 	{
 		APP_MOT_CTRL_Task();
 		APP_HALL_SENS_Task();
+		vTaskDelay( 500 );
 	}
 }
